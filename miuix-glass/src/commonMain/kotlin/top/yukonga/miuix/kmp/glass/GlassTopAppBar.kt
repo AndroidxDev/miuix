@@ -26,8 +26,8 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import top.yukonga.miuix.kmp.basic.BlurTopAppBar
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.glass.internal.drawGlassMask
@@ -74,9 +74,6 @@ object GlassTopAppBarDefaults {
     fun buttonFill(): Color {
         val page = MiuixTheme.colorScheme.surface
         val lift = if (MiuixTheme.colorScheme.background.luminance() < 0.5f) 0.10f else 0.55f
-        // Opaque, not a wash. Anything scrolling behind the button has to stop at it: the band
-        // above the button is solid, but the button reaches into the part of the bar where the
-        // band has already let go, and a translucent fill lets a bright control punch through it.
         return Color.White.copy(alpha = lift).compositeOver(page)
     }
 
@@ -145,7 +142,7 @@ fun GlassTopAppBar(
     buttonShape: GlassShape = GlassShape(buttonSize / 2),
     fill: Color = GlassTopAppBarDefaults.buttonFill(),
     stroke: GlassStroke? = null,
-    buttonShadow: GlassShadow? = GlassShadows.Float,
+    buttonShadow: GlassShadow? = GlassShadows.Regular,
     defaultWindowInsetsPadding: Boolean = true,
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
@@ -158,9 +155,6 @@ fun GlassTopAppBar(
         Box(
             modifier = Modifier
                 .matchParentSize()
-                // Stretched downward rather than laid out taller: the band has to reach past the
-                // bar, and the parent does not clip, so scaling from the top edge puts the extra
-                // reach exactly where it belongs without moving anything else.
                 .graphicsLayer {
                     this.alpha = ramp
                     transformOrigin = TransformOrigin(0.5f, 0f)
@@ -168,7 +162,7 @@ fun GlassTopAppBar(
                 }
                 .background(bandBrush),
         )
-        TopAppBar(
+        BlurTopAppBar(
             title = title,
             largeTitle = largeTitle,
             largeTitleBlurRadius = largeTitleBlurRadius,
@@ -221,7 +215,7 @@ fun GlassIconButton(
     shape: GlassShape = GlassShape(size / 2),
     fill: Color = GlassTopAppBarDefaults.buttonFill(),
     stroke: GlassStroke? = null,
-    shadow: GlassShadow? = GlassShadows.Float,
+    shadow: GlassShadow? = GlassShadows.Regular,
     content: @Composable () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -259,8 +253,6 @@ private fun GlassButtonSurface(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    // The rim lights the pill itself, and with no backdrop the pill is exactly `fill` — so what
-    // the rim is told is not a stand-in at all.
     Box(
         modifier = modifier
             .size(size)
@@ -277,8 +269,6 @@ private fun GlassButtonSurface(
                     )
                 } else {
                     Modifier
-                        // `clip` would cut a rounded rectangle while the stroke and the rim trace
-                        // the shader's supercircle, so the corners would disagree.
                         .then(
                             if (isRuntimeShaderSupported()) {
                                 Modifier.graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }

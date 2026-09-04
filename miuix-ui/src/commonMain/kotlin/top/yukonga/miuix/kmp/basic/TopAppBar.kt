@@ -87,8 +87,6 @@ import kotlin.math.abs
  * @param titleColor The color of the collapsed small title text.
  * @param largeTitle The large title of the [TopAppBar].
  * @param largeTitleColor The color of the expanded large title text.
- * @param largeTitleBlurRadius How far the large title blurs out as it collapses. It reaches this
- *   radius at the point the title has fully faded. 0, the default, leaves the title sharp.
  * @param subtitle The subtitle displayed below the title bar area.
  * @param subtitleColor The color of the subtitle text.
  * @param navigationIcon The [Composable] content that represents the navigation icon.
@@ -108,7 +106,78 @@ fun TopAppBar(
     titleColor: Color = MiuixTheme.colorScheme.onSurface,
     largeTitle: String = title,
     largeTitleColor: Color = MiuixTheme.colorScheme.onSurface,
-    largeTitleBlurRadius: Dp = 0.dp,
+    subtitle: String = "",
+    subtitleColor: Color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+    navigationIcon: @Composable () -> Unit = {},
+    actions: @Composable RowScope.() -> Unit = {},
+    scrollBehavior: ScrollBehavior? = null,
+    defaultWindowInsetsPadding: Boolean = true,
+    titlePadding: Dp = TopAppBarDefaults.TitlePadding,
+    navigationIconPadding: Dp = TopAppBarDefaults.NavigationIconPadding,
+    actionIconPadding: Dp = TopAppBarDefaults.ActionIconPadding,
+    bottomContent: @Composable () -> Unit = {},
+) {
+    val actionsRow =
+        @Composable {
+            Row(
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+                content = actions,
+            )
+        }
+
+    TopAppBarLayout(
+        title = title,
+        color = color,
+        titleColor = titleColor,
+        largeTitle = largeTitle,
+        largeTitleColor = largeTitleColor,
+        largeTitleBlurRadius = 0.dp,
+        subtitle = subtitle,
+        subtitleColor = subtitleColor,
+        navigationIcon = navigationIcon,
+        actions = actionsRow,
+        titlePadding = titlePadding,
+        navigationIconPadding = navigationIconPadding,
+        actionIconPadding = actionIconPadding,
+        scrollBehavior = scrollBehavior,
+        modifier = modifier,
+        defaultWindowInsetsPadding = defaultWindowInsetsPadding,
+        bottomContent = bottomContent,
+    )
+}
+
+/**
+ * An OS4 [BlurTopAppBar] whose large title blurs as it collapses.
+ *
+ * @param title The title of the [BlurTopAppBar].
+ * @param largeTitleBlurRadius How far the large title blurs out as it collapses. It reaches this
+ *   radius at the point the title has fully faded.
+ * @param modifier The modifier to be applied to the [BlurTopAppBar].
+ * @param color The background color of the [BlurTopAppBar].
+ * @param titleColor The color of the collapsed small title text.
+ * @param largeTitle The large title of the [BlurTopAppBar].
+ * @param largeTitleColor The color of the expanded large title text.
+ * @param subtitle The subtitle displayed below the title bar area.
+ * @param subtitleColor The color of the subtitle text.
+ * @param navigationIcon The content that represents the navigation icon.
+ * @param actions The content that represents the action icons.
+ * @param scrollBehavior The behavior that controls the [BlurTopAppBar].
+ * @param defaultWindowInsetsPadding Whether to apply default window insets padding.
+ * @param titlePadding The horizontal padding of the title and large title.
+ * @param navigationIconPadding The start padding of the navigation icon.
+ * @param actionIconPadding The end padding of the action icons.
+ * @param bottomContent Content displayed below the title bar area.
+ */
+@Composable
+fun BlurTopAppBar(
+    title: String,
+    largeTitleBlurRadius: Dp,
+    modifier: Modifier = Modifier,
+    color: Color = MiuixTheme.colorScheme.surface,
+    titleColor: Color = MiuixTheme.colorScheme.onSurface,
+    largeTitle: String = title,
+    largeTitleColor: Color = MiuixTheme.colorScheme.onSurface,
     subtitle: String = "",
     subtitleColor: Color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
     navigationIcon: @Composable () -> Unit = {},
@@ -834,8 +903,8 @@ private fun TopAppBarLayout(
                     Modifier
                 },
             )
-            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top))
             .clipToBounds()
+            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top))
             .pointerInput(Unit) {
                 detectTapGestures { /* Consume click */ }
             },
@@ -1059,8 +1128,8 @@ private fun SmallTopAppBarLayout(
                     Modifier
                 },
             )
-            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top))
             .clipToBounds()
+            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top))
             .pointerInput(Unit) {
                 detectTapGestures { /* Consume click */ }
             },
