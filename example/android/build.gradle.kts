@@ -1,8 +1,6 @@
 // Copyright 2025, compose-miuix-ui contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.baselineprofile)
@@ -36,39 +34,13 @@ android {
     }
     experimentalProperties["android.experimental.r8.dex-startup-optimization"] = true
     namespace = BuildConfig.APPLICATION_ID
-    val properties = Properties()
-    runCatching { properties.load(project.rootProject.file("local.properties").inputStream()) }
-    val keystorePath = properties.getProperty("KEYSTORE_PATH") ?: System.getenv("KEYSTORE_PATH")
-    val keystorePwd = properties.getProperty("KEYSTORE_PASS") ?: System.getenv("KEYSTORE_PASS")
-    val alias = properties.getProperty("KEY_ALIAS") ?: System.getenv("KEY_ALIAS")
-    val pwd = properties.getProperty("KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD")
-    if (keystorePath != null) {
-        signingConfigs {
-            register("github") {
-                storeFile = file(keystorePath)
-                storePassword = keystorePwd
-                keyAlias = alias
-                keyPassword = pwd
-                enableV3Signing = true
-                enableV4Signing = true
-            }
-        }
-    } else {
-        signingConfigs {
-            register("release") {
-                enableV3Signing = true
-                enableV4Signing = true
-            }
-        }
-    }
+   
     buildTypes {
         release {
             optimization.enable = true
             vcsInfo.include = false
-            signingConfig = signingConfigs.getByName(if (keystorePath != null) "github" else "release")
         }
         debug {
-            if (keystorePath != null) signingConfig = signingConfigs.getByName("github")
         }
         create("nonMinifiedRelease") {
             signingConfig = signingConfigs.getByName("debug")
