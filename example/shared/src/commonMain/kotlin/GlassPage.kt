@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -179,7 +181,12 @@ fun GlassPage(padding: PaddingValues) {
     val isInDark = isInDarkTheme()
     val backdrop = rememberLayerBackdrop()
     val scrollBehavior = MiuixScrollBehavior()
+    val listState = rememberLazyListState()
     val collapseRamp = GlassTopAppBarDefaults.collapseRamp(scrollBehavior)
+    val contentUnderTopBar by remember {
+        derivedStateOf { listState.canScrollBackward }
+    }
+    val tabSurfaceAlpha = if (contentUnderTopBar) 1f else 0f
 
     var materialIndex by remember(isInDark) {
         mutableIntStateOf(if (isInDark) MATERIAL_DARK else MATERIAL_LIGHT)
@@ -228,10 +235,10 @@ fun GlassPage(padding: PaddingValues) {
             topBar = {
                 GlassTopAppBar(
                     title = "Glass",
+                    backdrop = backdrop,
                     scrollBehavior = scrollBehavior,
                     style = style,
                     alpha = alpha,
-                    stroke = stroke,
                     navigationIcon = {
                         Icon(
                             imageVector = MiuixIcons.Back,
@@ -250,9 +257,6 @@ fun GlassPage(padding: PaddingValues) {
                                 cornerRadius = GlassTopAppBarDefaults.ButtonSize / 2,
                                 floating = collapseRamp > 0.01f,
                             ),
-                            surfaceAlpha = collapseRamp * alpha,
-                            style = style,
-                            stroke = stroke,
                         ) {
                             Icon(
                                 imageVector = MiuixIcons.Settings,
@@ -274,7 +278,7 @@ fun GlassPage(padding: PaddingValues) {
                                 backdrop = backdrop,
                                 style = style,
                                 alpha = alpha,
-                                surfaceAlpha = collapseRamp,
+                                surfaceAlpha = 1f,
                                 stroke = stroke,
                             )
                             GlassTabRow(
@@ -284,7 +288,7 @@ fun GlassPage(padding: PaddingValues) {
                                 backdrop = backdrop,
                                 style = style,
                                 alpha = alpha,
-                                surfaceAlpha = collapseRamp,
+                                surfaceAlpha = tabSurfaceAlpha,
                                 stroke = stroke,
                                 height = GlassTabRowDefaults.NeutralHeight,
                                 colors = GlassTabRowDefaults.neutralColors(),
@@ -296,7 +300,7 @@ fun GlassPage(padding: PaddingValues) {
                                 backdrop = backdrop,
                                 style = style,
                                 alpha = alpha,
-                                surfaceAlpha = collapseRamp,
+                                surfaceAlpha = tabSurfaceAlpha,
                                 stroke = stroke,
                             )
                         }
@@ -315,6 +319,7 @@ fun GlassPage(padding: PaddingValues) {
                         )
                     }
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier
                             .fillMaxSize()
                             .nestedScroll(scrollBehavior.nestedScrollConnection),
