@@ -57,6 +57,10 @@ object GlassMotion {
     @Stable
     fun <T> navIndicatorTrail(): SpringSpec<T> = springOf(0.75f, 0.5f)
 
+    /** The bottom indicator follows drag targets with a critically damped spring. */
+    @Stable
+    fun <T> navDragFollow(): SpringSpec<T> = springOf(1f, 0.15f)
+
     /** [navIndicator] for the edge that leads the travel, [navIndicatorTrail] for the one behind. */
     @Stable
     fun <T> edgeSpring(leading: Boolean): SpringSpec<T> = if (leading) navIndicator() else navIndicatorTrail()
@@ -86,6 +90,25 @@ object GlassMotion {
     @Stable
     fun <T> default(): SpringSpec<T> = springOf(0.95f, 0.35f)
 
+    /** HyperPopupWindow's default opening spring and explicit secondary collapse spring. */
+    @Stable
+    fun secondaryPopup(expanding: Boolean): SpringSpec<Float> = if (expanding) {
+        transformSpring(0.95f, 0.35f)
+    } else {
+        transformSpring(0.95f, 0.2f)
+    }
+
+    /** HyperPopupWindow's independent AUTO_ALPHA track, with ViewProperty's alpha threshold. */
+    @Stable
+    internal fun secondaryPopupMask(expanding: Boolean): SpringSpec<Float> = folmeSpring(
+        damping = 0.95f,
+        response = if (expanding) 0.35f else 0.2f,
+        visibilityThreshold = POPUP_MASK_MIN_VISIBLE_CHANGE * 0.75f,
+    )
+
+    /** ViewProperty.AUTO_ALPHA hides the mask below one 8-bit alpha step. */
+    internal const val POPUP_MASK_MIN_VISIBLE_CHANGE: Float = 1f / 256f
+
     /** A top bar expanding back to its large title. */
     @Stable
     fun <T> barExpand(): SpringSpec<T> = springOf(1f, 0.3f)
@@ -104,6 +127,10 @@ object GlassMotion {
         durationMillis = 350,
         easing = LinearEasing,
     )
+
+    /** ActionBarContainer's overlay mask follows a separate 100ms linear transition. */
+    @Stable
+    fun topBarMask(): FiniteAnimationSpec<Float> = tween(durationMillis = 100, easing = LinearEasing)
 
     /** A popup opening from its anchor. The only under-damped spring in the set — it overshoots. */
     @Stable

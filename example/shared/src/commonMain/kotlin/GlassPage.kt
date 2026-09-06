@@ -10,9 +10,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,10 +34,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
 import component.basicComponentSection
 import component.buttonSection
@@ -66,10 +69,10 @@ import top.yukonga.miuix.kmp.glass.GlassMotion
 import top.yukonga.miuix.kmp.glass.GlassNavigationBar
 import top.yukonga.miuix.kmp.glass.GlassNavigationItem
 import top.yukonga.miuix.kmp.glass.GlassOverlayDefaults
-import top.yukonga.miuix.kmp.glass.GlassPopup
 import top.yukonga.miuix.kmp.glass.GlassPopupDefaults
 import top.yukonga.miuix.kmp.glass.GlassPopupItem
 import top.yukonga.miuix.kmp.glass.GlassPopupSizing
+import top.yukonga.miuix.kmp.glass.GlassSecondaryPopup
 import top.yukonga.miuix.kmp.glass.GlassSegmentedTabRow
 import top.yukonga.miuix.kmp.glass.GlassShape
 import top.yukonga.miuix.kmp.glass.GlassStroke
@@ -179,7 +182,10 @@ private const val MATERIAL_DARK = 9
 fun GlassPage(padding: PaddingValues) {
     val navigator = LocalNavigator.current
     val isInDark = isInDarkTheme()
+    val navigationBarInset = with(LocalDensity.current) { WindowInsets.navigationBars.getBottom(this).toDp() }
+    val bottomBarMargin = if (navigationBarInset < 24.dp) 24.dp else navigationBarInset + 8.dp
     val backdrop = rememberLayerBackdrop()
+    val secondaryBackdrop = rememberLayerBackdrop()
     val scrollBehavior = MiuixScrollBehavior()
     val listState = rememberLazyListState()
     val collapseRamp = GlassTopAppBarDefaults.collapseRamp(scrollBehavior)
@@ -211,6 +217,7 @@ fun GlassPage(padding: PaddingValues) {
     val stroke = if (isInDark) StrokesDark[strokeIndex] else Strokes[strokeIndex].second
     val popupVisuals = GlassPopupDefaults.visuals(style = style, alpha = alpha, stroke = stroke)
     var submenu by remember { mutableStateOf(false) }
+    var submenuPresent by remember { mutableStateOf(false) }
     var submenuAnchor by remember { mutableStateOf(Rect.Zero) }
     var menuWidth by remember { mutableStateOf(0.dp) }
     var sortOrder by remember { mutableIntStateOf(0) }
@@ -230,324 +237,352 @@ fun GlassPage(padding: PaddingValues) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            topBar = {
-                GlassTopAppBar(
-                    title = "Glass",
-                    backdrop = backdrop,
-                    scrollBehavior = scrollBehavior,
-                    style = style,
-                    alpha = alpha,
-                    navigationIcon = {
-                        Icon(
-                            imageVector = MiuixIcons.Back,
-                            contentDescription = "Back",
+        // Record the page and primary menu, including its scale and dimming mask.
+        // The secondary must stay outside this layer so it never samples itself.
+        Box(modifier = Modifier.fillMaxSize().layerBackdrop(secondaryBackdrop)) {
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                topBar = {
+                    GlassTopAppBar(
+                        title = "Glass",
+                        isContentScrolled = contentUnderTopBar,
+                        backdrop = backdrop,
+                        scrollBehavior = scrollBehavior,
+                        style = style,
+                        alpha = alpha,
+                        navigationIcon = {
+                            GlassIconButton(onClick = { navigator.pop() }) {
+                                Icon(
+                                    imageVector = MiuixIcons.Back,
+                                    contentDescription = "Back",
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MiuixTheme.colorScheme.onSurface,
+                                )
+                            }
+                        },
+                        actions = {
+                            GlassIconButton(
+                                onClick = {
+                                    submenu = false
+                                    overlayIndex = OVERLAY_POPUP
+                                },
+                                modifier = Modifier.glassPopupAnchor(
+                                    anchor = menuAnchor,
+                                    cornerRadius = GlassTopAppBarDefaults.ButtonSize / 2,
+                                    floating = contentUnderTopBar,
+                                ),
+                            ) {
+                                Icon(
+                                    imageVector = MiuixIcons.Settings,
+                                    contentDescription = "Sort",
+                                    modifier = Modifier.size(20.dp).glassPopupAnchorContent(menuAnchor),
+                                    tint = MiuixTheme.colorScheme.onSurface,
+                                )
+                            }
+                        },
+                        bottomContent = {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 6.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                GlassTabRow(
+                                    tabs = listOf("Sound", "Haptics"),
+                                    selectedIndex = primaryTab,
+                                    onSelect = { primaryTab = it },
+                                    backdrop = backdrop,
+                                    style = style,
+                                    alpha = alpha,
+                                    surfaceAlpha = 1f,
+                                    stroke = stroke,
+                                )
+                                GlassTabRow(
+                                    tabs = listOf("Home", "Widget", "Theme", "Paper"),
+                                    selectedIndex = neutralTab,
+                                    onSelect = { neutralTab = it },
+                                    backdrop = backdrop,
+                                    style = style,
+                                    alpha = alpha,
+                                    surfaceAlpha = tabSurfaceAlpha,
+                                    stroke = stroke,
+                                    height = GlassTabRowDefaults.NeutralHeight,
+                                    colors = GlassTabRowDefaults.neutralColors(),
+                                )
+                                GlassSegmentedTabRow(
+                                    tabs = listOf("Privacy", "Security"),
+                                    selectedIndex = joinedTab,
+                                    onSelect = { joinedTab = it },
+                                    backdrop = backdrop,
+                                    style = style,
+                                    alpha = alpha,
+                                    surfaceAlpha = tabSurfaceAlpha,
+                                    stroke = stroke,
+                                )
+                            }
+                        },
+                    )
+                },
+            ) { innerPadding ->
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Box(modifier = Modifier.fillMaxSize().layerBackdrop(backdrop).background(MiuixTheme.colorScheme.surface)) {
+                        if (wallpaper) {
+                            Image(
+                                painter = painterResource(Res.drawable.blur_test),
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                            )
+                        }
+                        LazyColumn(
+                            state = listState,
                             modifier = Modifier
-                                .size(20.dp)
-                                .clickable(interactionSource = null, indication = null) { navigator.pop() },
-                            tint = MiuixTheme.colorScheme.onSurface,
-                        )
-                    },
-                    actions = {
-                        GlassIconButton(
-                            onClick = { overlayIndex = OVERLAY_POPUP },
-                            modifier = Modifier.glassPopupAnchor(
-                                anchor = menuAnchor,
-                                cornerRadius = GlassTopAppBarDefaults.ButtonSize / 2,
-                                floating = collapseRamp > 0.01f,
+                                .fillMaxSize()
+                                .nestedScroll(scrollBehavior.nestedScrollConnection),
+                            contentPadding = PaddingValues(
+                                top = innerPadding.calculateTopPadding(),
+                                bottom = 160.dp + padding.calculateBottomPadding(),
                             ),
                         ) {
-                            Icon(
-                                imageVector = MiuixIcons.Settings,
-                                contentDescription = "Sort",
-                                modifier = Modifier.size(20.dp).glassPopupAnchorContent(menuAnchor),
-                                tint = MiuixTheme.colorScheme.onSurface,
-                            )
-                        }
-                    },
-                    bottomContent = {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 12.dp).padding(bottom = 6.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            GlassTabRow(
-                                tabs = listOf("Sound", "Haptics"),
-                                selectedIndex = primaryTab,
-                                onSelect = { primaryTab = it },
-                                backdrop = backdrop,
-                                style = style,
-                                alpha = alpha,
-                                surfaceAlpha = 1f,
-                                stroke = stroke,
-                            )
-                            GlassTabRow(
-                                tabs = listOf("Home", "Widget", "Theme", "Paper"),
-                                selectedIndex = neutralTab,
-                                onSelect = { neutralTab = it },
-                                backdrop = backdrop,
-                                style = style,
-                                alpha = alpha,
-                                surfaceAlpha = tabSurfaceAlpha,
-                                stroke = stroke,
-                                height = GlassTabRowDefaults.NeutralHeight,
-                                colors = GlassTabRowDefaults.neutralColors(),
-                            )
-                            GlassSegmentedTabRow(
-                                tabs = listOf("Privacy", "Security"),
-                                selectedIndex = joinedTab,
-                                onSelect = { joinedTab = it },
-                                backdrop = backdrop,
-                                style = style,
-                                alpha = alpha,
-                                surfaceAlpha = tabSurfaceAlpha,
-                                stroke = stroke,
-                            )
-                        }
-                    },
-                )
-            },
-        ) { innerPadding ->
-            Box(modifier = Modifier.fillMaxSize()) {
-                Box(modifier = Modifier.fillMaxSize().layerBackdrop(backdrop).background(MiuixTheme.colorScheme.surface)) {
-                    if (wallpaper) {
-                        Image(
-                            painter = painterResource(Res.drawable.blur_test),
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                        )
-                    }
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .nestedScroll(scrollBehavior.nestedScrollConnection),
-                        contentPadding = PaddingValues(
-                            top = innerPadding.calculateTopPadding(),
-                            bottom = 160.dp + padding.calculateBottomPadding(),
-                        ),
-                    ) {
-                        item(key = "glass-dropdown-title") { SmallTitle(text = "Dropdown") }
-                        item(key = "glass-dropdown") {
-                            Card(modifier = Modifier.padding(horizontal = 12.dp)) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .onGloballyPositioned { dropdownAnchor = it.boundsInRoot() }
-                                        .clickable(interactionSource = null, indication = null) {
-                                            overlayIndex = OVERLAY_DROPDOWN
-                                        }
-                                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(
-                                        text = "Bluetooth stack log",
-                                        modifier = Modifier.weight(1f),
-                                        style = MiuixTheme.textStyles.body1,
-                                        color = MiuixTheme.colorScheme.onSurface,
-                                    )
+                            item(key = "glass-dropdown-title") { SmallTitle(text = "Dropdown") }
+                            item(key = "glass-dropdown") {
+                                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
                                     Row(
-                                        modifier = Modifier.glassPopupAnchorValue(dropdownRow),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .onGloballyPositioned { dropdownAnchor = it.boundsInRoot() }
+                                            .clickable(interactionSource = null, indication = null) {
+                                                overlayIndex = OVERLAY_DROPDOWN
+                                            }
+                                            .padding(horizontal = 16.dp, vertical = 14.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Text(
-                                            text = LogLevels[logLevel],
-                                            style = MiuixTheme.textStyles.body2,
-                                            color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                                            text = "Bluetooth stack log",
+                                            modifier = Modifier.weight(1f),
+                                            style = MiuixTheme.textStyles.body1,
+                                            color = MiuixTheme.colorScheme.onSurface,
                                         )
-                                        Icon(
-                                            imageVector = MiuixIcons.Basic.ArrowUpDown,
-                                            contentDescription = null,
-                                            modifier = Modifier.padding(start = 8.dp).size(14.dp),
-                                            tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                                        )
+                                        Row(
+                                            modifier = Modifier.glassPopupAnchorValue(dropdownRow),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Text(
+                                                text = LogLevels[logLevel],
+                                                style = MiuixTheme.textStyles.body2,
+                                                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                                            )
+                                            Icon(
+                                                imageVector = MiuixIcons.Basic.ArrowUpDown,
+                                                contentDescription = null,
+                                                modifier = Modifier.padding(start = 8.dp).size(14.dp),
+                                                tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                                            )
+                                        }
                                     }
                                 }
                             }
-                        }
-                        switchSection()
-                        buttonSection()
-                        cardSection()
-                        sliderSection()
-                        textFieldSection()
-                        item(key = "controls-title") { SmallTitle(text = "Material") }
-                        item(key = "controls") {
-                            Card(modifier = Modifier.padding(horizontal = 12.dp)) {
-                                OverlayDropdownPreference(
-                                    title = "Material",
-                                    items = Materials.map { it.first },
-                                    selectedIndex = materialIndex,
-                                    onSelectedIndexChange = { materialIndex = it },
-                                )
-                                OverlayDropdownPreference(
-                                    title = "Bloom Stroke",
-                                    items = Strokes.map { it.first },
-                                    selectedIndex = strokeIndex,
-                                    onSelectedIndexChange = { strokeIndex = it },
-                                )
-                                OverlayDropdownPreference(
-                                    title = "Overlay",
-                                    items = OverlayNames,
-                                    selectedIndex = overlayIndex,
-                                    onSelectedIndexChange = { overlayIndex = it },
-                                )
-                                SwitchPreference(
-                                    title = "Wallpaper",
-                                    summary = "A photograph behind the glass, to judge the refraction",
-                                    checked = wallpaper,
-                                    onCheckedChange = { wallpaper = it },
-                                )
-                                SwitchPreference(
-                                    title = "Show Dialog",
-                                    checked = visible,
-                                    onCheckedChange = {
-                                        visible = it
-                                        overlayIndex = if (it) OVERLAY_DIALOG else OVERLAY_NONE
-                                    },
-                                )
-                                HorizontalDivider(Modifier.fillMaxWidth().padding(horizontal = 16.dp))
-                                SliderPreference(
-                                    title = "Corner Radius",
-                                    valueText = "${cornerRadius.toInt()}",
-                                    value = cornerRadius / 64f,
-                                    onValueChange = { cornerRadius = it * 64f },
-                                    insideMargin = PaddingValues(16.dp, 16.dp, 16.dp, 0.dp),
-                                )
-                                SliderPreference(
-                                    title = "Corner Smoothing",
-                                    valueText = "${(smoothing * 100).toInt() / 100f}",
-                                    value = smoothing,
-                                    onValueChange = { smoothing = it },
-                                    insideMargin = PaddingValues(16.dp, 16.dp, 16.dp, 0.dp),
-                                )
-                                SliderPreference(
-                                    title = "Alpha",
-                                    valueText = "${(alpha * 100).toInt() / 100f}",
-                                    value = alpha,
-                                    onValueChange = { alpha = it },
-                                )
+                            switchSection()
+                            buttonSection()
+                            cardSection()
+                            sliderSection()
+                            textFieldSection()
+                            item(key = "controls-title") { SmallTitle(text = "Material") }
+                            item(key = "controls") {
+                                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+                                    OverlayDropdownPreference(
+                                        title = "Material",
+                                        items = Materials.map { it.first },
+                                        selectedIndex = materialIndex,
+                                        onSelectedIndexChange = { materialIndex = it },
+                                    )
+                                    OverlayDropdownPreference(
+                                        title = "Bloom Stroke",
+                                        items = Strokes.map { it.first },
+                                        selectedIndex = strokeIndex,
+                                        onSelectedIndexChange = { strokeIndex = it },
+                                    )
+                                    OverlayDropdownPreference(
+                                        title = "Overlay",
+                                        items = OverlayNames,
+                                        selectedIndex = overlayIndex,
+                                        onSelectedIndexChange = { overlayIndex = it },
+                                    )
+                                    SwitchPreference(
+                                        title = "Wallpaper",
+                                        summary = "A photograph behind the glass, to judge the refraction",
+                                        checked = wallpaper,
+                                        onCheckedChange = { wallpaper = it },
+                                    )
+                                    SwitchPreference(
+                                        title = "Show Dialog",
+                                        checked = visible,
+                                        onCheckedChange = {
+                                            visible = it
+                                            overlayIndex = if (it) OVERLAY_DIALOG else OVERLAY_NONE
+                                        },
+                                    )
+                                    HorizontalDivider(Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+                                    SliderPreference(
+                                        title = "Corner Radius",
+                                        valueText = "${cornerRadius.toInt()}",
+                                        value = cornerRadius / 64f,
+                                        onValueChange = { cornerRadius = it * 64f },
+                                        insideMargin = PaddingValues(16.dp, 16.dp, 16.dp, 0.dp),
+                                    )
+                                    SliderPreference(
+                                        title = "Corner Smoothing",
+                                        valueText = "${(smoothing * 100).toInt() / 100f}",
+                                        value = smoothing,
+                                        onValueChange = { smoothing = it },
+                                        insideMargin = PaddingValues(16.dp, 16.dp, 16.dp, 0.dp),
+                                    )
+                                    SliderPreference(
+                                        title = "Alpha",
+                                        valueText = "${(alpha * 100).toInt() / 100f}",
+                                        value = alpha,
+                                        onValueChange = { alpha = it },
+                                    )
+                                }
                             }
                         }
                     }
-                }
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                        .padding(horizontal = 27.dp, vertical = 9.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    GlassNavigationBar(
-                        items = NavItems,
-                        selectedIndex = navIndex,
-                        onSelect = { navIndex = it },
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = bottomBarMargin),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        GlassNavigationBar(
+                            items = NavItems,
+                            selectedIndex = navIndex,
+                            onSelect = { navIndex = it },
+                            backdrop = backdrop,
+                            modifier = Modifier.layout { measurable, constraints ->
+                                // BottomNavigator's four/five-item rule accounts for overlapping items
+                                // before deciding whether to use the compact 344dp wide-screen bar.
+                                val available = constraints.maxWidth + (10.dp * (NavItems.size - 1) - 6.dp).roundToPx()
+                                val width = if (constraints.hasBoundedWidth && available > 400.dp.roundToPx()) {
+                                    constraints.constrainWidth(344.dp.roundToPx())
+                                } else {
+                                    constraints.maxWidth
+                                }
+                                val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
+                                layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
+                            },
+                            style = style,
+                            alpha = alpha,
+                            stroke = stroke,
+                        )
+                    }
+
+                    GlassDialog(
+                        visible = overlayIndex == OVERLAY_DIALOG,
+                        onDismissRequest = {
+                            overlayIndex = OVERLAY_NONE
+                            visible = false
+                        },
                         backdrop = backdrop,
+                        scrimAlpha = if (isInDark) {
+                            GlassOverlayDefaults.ScrimAlphaDark
+                        } else {
+                            GlassOverlayDefaults.ScrimAlphaLight
+                        },
                         style = style,
                         alpha = alpha,
                         stroke = stroke,
-                    )
-                }
-
-                GlassDialog(
-                    visible = overlayIndex == OVERLAY_DIALOG,
-                    onDismissRequest = {
-                        overlayIndex = OVERLAY_NONE
-                        visible = false
-                    },
-                    backdrop = backdrop,
-                    scrimAlpha = if (isInDark) {
-                        GlassOverlayDefaults.ScrimAlphaDark
-                    } else {
-                        GlassOverlayDefaults.ScrimAlphaLight
-                    },
-                    style = style,
-                    alpha = alpha,
-                    stroke = stroke,
-                ) {
-                    Text(text = "Glass Dialog", style = MiuixTheme.textStyles.title4)
-                    Text(
-                        text = "The dialog wears the material the page is set to.",
-                        style = MiuixTheme.textStyles.body2,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 18.dp),
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        TextButton(
-                            text = "Cancel",
-                            onClick = {
-                                overlayIndex = OVERLAY_NONE
-                                visible = false
-                            },
-                            modifier = Modifier.weight(1f),
+                    ) {
+                        Text(text = "Glass Dialog", style = MiuixTheme.textStyles.title4)
+                        Text(
+                            text = "The dialog wears the material the page is set to.",
+                            style = MiuixTheme.textStyles.body2,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 18.dp),
                         )
-                        Button(
-                            onClick = {
-                                overlayIndex = OVERLAY_NONE
-                                visible = false
-                            },
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text(text = "Confirm", style = MiuixTheme.textStyles.button)
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            TextButton(
+                                text = "Cancel",
+                                onClick = {
+                                    overlayIndex = OVERLAY_NONE
+                                    visible = false
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+                            Button(
+                                onClick = {
+                                    overlayIndex = OVERLAY_NONE
+                                    visible = false
+                                },
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text(text = "Confirm", style = MiuixTheme.textStyles.button)
+                            }
                         }
                     }
                 }
             }
-        }
 
-        GlassTransformPopup(
-            show = overlayIndex == OVERLAY_POPUP || submenu,
-            onDismissRequest = { overlayIndex = OVERLAY_NONE },
-            anchor = menuAnchor,
-            backdrop = backdrop,
-            anchorContent = {
-                Icon(
-                    imageVector = MiuixIcons.Settings,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MiuixTheme.colorScheme.onSurface,
-                )
-            },
-            stacked = submenu,
-            visuals = popupVisuals,
-            anchorAlpha = collapseRamp,
-            gap = 0.dp,
-            onMeasured = { menuWidth = with(density) { it.width.toDp() } },
-        ) {
-            GlassPopupItem(
-                text = "View",
-                onClick = { overlayIndex = OVERLAY_NONE },
-                icon = MiuixIcons.Image,
-                summary = "List view",
-                showArrow = true,
-            )
-            GlassPopupItem(
-                text = "Sort by",
-                onClick = { submenu = true },
-                modifier = Modifier.onGloballyPositioned {
-                    if (!submenu) submenuAnchor = it.boundsInRoot()
+            GlassTransformPopup(
+                show = overlayIndex == OVERLAY_POPUP,
+                onDismissRequest = {
+                    submenu = false
+                    overlayIndex = OVERLAY_NONE
                 },
-                icon = MiuixIcons.Edit,
-                summary = SortOrders[sortOrder],
-                showArrow = true,
-                arrowRotation = { submenuArrow },
-            )
-            GlassPopupItem(
-                text = "Settings",
-                onClick = { overlayIndex = OVERLAY_NONE },
-                icon = MiuixIcons.Settings,
-            )
+                anchor = menuAnchor,
+                backdrop = backdrop,
+                anchorContent = {
+                    Icon(
+                        imageVector = MiuixIcons.Settings,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MiuixTheme.colorScheme.onSurface,
+                    )
+                },
+                stacked = submenu,
+                visuals = popupVisuals,
+                anchorAlpha = collapseRamp,
+                gap = 0.dp,
+                onMeasured = { menuWidth = with(density) { it.width.toDp() } },
+            ) {
+                GlassPopupItem(
+                    text = "View",
+                    onClick = { overlayIndex = OVERLAY_NONE },
+                    icon = MiuixIcons.Image,
+                    summary = "List view",
+                    showArrow = true,
+                )
+                GlassPopupItem(
+                    text = "Sort by",
+                    onClick = {
+                        if (overlayIndex == OVERLAY_POPUP) {
+                            submenuPresent = true
+                            submenu = true
+                        }
+                    },
+                    modifier = Modifier.onGloballyPositioned {
+                        if (!submenuPresent) submenuAnchor = it.boundsInRoot()
+                    },
+                    icon = MiuixIcons.Edit,
+                    summary = SortOrders[sortOrder],
+                    showArrow = true,
+                    arrowRotation = { submenuArrow * (1f - menuAnchor.secondaryBackProgress) },
+                )
+                GlassPopupItem(
+                    text = "Settings",
+                    onClick = { overlayIndex = OVERLAY_NONE },
+                    icon = MiuixIcons.Settings,
+                )
+            }
         }
 
-        GlassPopup(
-            show = submenu,
+        GlassSecondaryPopup(
+            show = overlayIndex == OVERLAY_POPUP && submenu,
             onDismissRequest = { submenu = false },
             anchorBounds = submenuAnchor,
-            backdrop = backdrop,
+            backdrop = secondaryBackdrop,
+            materialAnchor = menuAnchor,
+            onDismissFinished = { submenuPresent = false },
             sizing = GlassPopupSizing(minWidth = menuWidth),
             visuals = popupVisuals,
-            secondary = true,
         ) {
             GlassPopupItem(
                 text = "Sort by",
@@ -555,7 +590,7 @@ fun GlassPage(padding: PaddingValues) {
                 icon = MiuixIcons.Edit,
                 summary = SortOrders[sortOrder],
                 showArrow = true,
-                arrowRotation = { submenuArrow },
+                arrowRotation = { submenuArrow * (1f - menuAnchor.secondaryBackProgress) },
             )
             HorizontalDivider(
                 modifier = Modifier.padding(
