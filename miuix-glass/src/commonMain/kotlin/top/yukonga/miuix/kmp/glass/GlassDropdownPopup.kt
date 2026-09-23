@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -34,12 +36,9 @@ object GlassDropdownDefaults {
 /**
  * A list of choices dropped from a settings row, on glass.
  *
- * The third of the source system's three openings, and the only one that holds no edge still.
- * [GlassPopup] pins its far corner and lets the panel grow out of it; [GlassTransformPopup] hands
- * the control's own rectangle over to the panel. This one throws the panel along an arc: its size
- * and its centre run on two springs of different speeds, so opening, a flat capsule reaches where
- * the panel belongs before the panel has finished growing and its far edges pull in and rebound.
- * Closing, the two swap, and the panel blurs itself away rather than simply shrinking.
+ * The third of the three openings, and the only one that holds no edge still: the panel's size and
+ * its centre run on two springs of different speeds, so it travels along an arc rather than
+ * growing out of a pinned corner.
  *
  * @param show Whether the panel is open.
  * @param onDismissRequest Called when a tap outside should close it.
@@ -53,7 +52,7 @@ object GlassDropdownDefaults {
  * @param visuals What its surface is made of.
  * @param cornerRadius Corner radius the panel settles at.
  * @param contentPadding Padding around the rows.
- * @param content The rows. [GlassPopupItem] with `selected` gives the source's own tick.
+ * @param content The rows. [GlassPopupItem] with `selected` shows a tick.
  */
 @Composable
 fun BoxScope.GlassDropdownPopup(
@@ -69,7 +68,7 @@ fun BoxScope.GlassDropdownPopup(
     contentPadding: PaddingValues = PaddingValues(vertical = GlassPopupDefaults.ContentPaddingVertical),
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val size by animateFloatAsState(
+    val size = animateFloatAsState(
         targetValue = if (show) 1f else 0f,
         animationSpec = GlassMotion.arcBounds(show),
         label = "glassDropdownSize",
@@ -90,7 +89,9 @@ fun BoxScope.GlassDropdownPopup(
         label = "glassDropdownBlur",
     )
 
-    val active = show || size > 0.0001f
+    val active by remember(show, size) {
+        derivedStateOf { show || size.value > 0.0001f }
+    }
     val layoutDirection = LocalLayoutDirection.current
     val backProgress = rememberGlassPopupBackProgress(
         show = show,
@@ -108,7 +109,7 @@ fun BoxScope.GlassDropdownPopup(
             }
         }
     }
-    fun geometryProgress() = popupFractionWithBack(size, backProgress.value)
+    fun geometryProgress() = popupFractionWithBack(size.value, backProgress.value)
     fun positionProgress() = popupFractionWithBack(position, backProgress.value)
     fun fadeProgress() = fade * (1f - backProgress.value.coerceIn(0f, 1f))
     fun sharpnessProgress() = sharpness * (1f - backProgress.value.coerceIn(0f, 1f))
@@ -160,9 +161,8 @@ fun BoxScope.GlassDropdownPopup(
 /**
  * The panel's rectangle partway along the arc.
  *
- * Two fractions drive it, not one: the width and the aspect ratio follow [sizeFraction], while the
- * centre follows the quicker [positionFraction]. The capsule it opens from is 69% of the panel's
- * width and a fifth of its own width tall, tucked against the panel's own far edges.
+ * Two fractions drive it, not one: the width and the aspect ratio follow [sizeFraction], while
+ * the centre follows the quicker [positionFraction].
  */
 private fun arcFrame(
     anchor: Rect,
