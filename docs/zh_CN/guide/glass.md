@@ -378,6 +378,12 @@ Scaffold(contentWindowInsets = WindowInsets(0)) {
 
 需要自行组合 Overlay 宿主时，仍可使用 `glassDialogSurface` 和 `glassBottomSheetSurface`。
 
+### GlassDropdownPreference
+
+[`GlassDropdownPreference`](/zh_CN/components/glassdropdownpreference) 将标准设置行与玻璃下拉弹窗封装在一起，内部管理展开、选择回调、锚点测量和关闭，无需在页面单独管理 `GlassDropdownPopup`。
+
+设置行复用 `BasicComponent` 的 17sp Medium 标题、内边距和标准下拉箭头。弹出选项使用 16sp Medium，与标准下拉组件一致。通过 `visuals` 自定义弹窗材质，通过 `sizing` 调整尺寸限制。弹窗默认由根 `Scaffold` 承载，该浮层宿主应位于传入的背景采样层之外。
+
 ### 弹窗
 
 `GlassTransformPopup` 会从按钮处生长出面板。先持有 `GlassPopupAnchor`，用 `Modifier.glassPopupAnchor` 上报按钮、用 `Modifier.glassPopupAnchorContent` 上报按钮内容，再把锚点交给弹窗：
@@ -412,7 +418,9 @@ Box {
 }
 ```
 
-共享同一个锚点，才能让按钮和从它生长出的面板保持一致。
+锚点提供按钮在收起端点的外观。面板随着现有形变动画展开时，背景平滑过渡到弹窗自己的 `visuals`，收起时反向过渡。展开后的菜单使用独立的 60dp 模糊材质，并分别配置亮色、暗色的颜色混合层。
+
+顶栏菜单的 `backdrop` 应记录包含顶栏的页面，弹窗绘制在该采样层之外；顶栏本身仍可只采样页面内容。显式传入的弹窗背景优先使用，`null` 时回退到按钮的背景。
 
 `GlassPopup`、`GlassSecondaryPopup` 与 `GlassDropdownPopup` 则接收 `anchorBounds: Rect`，由调用方上报触发元素自身：
 
@@ -435,7 +443,7 @@ GlassSecondaryPopup(
 }
 ```
 
-`GlassSecondaryPopup` 在已展开的菜单旁打开二级菜单；收起过程中请保持其组合，并把一级弹窗的 `materialAnchor` 传给它，让两者共享材质。
+`GlassSecondaryPopup` 在已展开的菜单旁打开二级菜单；收起过程中请保持其组合，并把一级弹窗的锚点传给 `materialAnchor`，让两者共享展开后的菜单外观。二级菜单的采样背景应包含一级菜单，并排除二级菜单自身。
 
 `GlassDropdownPopup` 在退场动画期间保留面板，但 `show` 变为 false 时立即停止菜单项的指针交互和无障碍操作。
 

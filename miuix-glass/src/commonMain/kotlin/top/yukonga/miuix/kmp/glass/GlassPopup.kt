@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -195,7 +196,7 @@ object GlassPopupDefaults {
  * @param cornerRadius Corner radius the panel settles at.
  * @param secondary Whether this menu was opened from a row of another one. Delegates to
  *   [GlassSecondaryPopup]'s geometry; use that component directly to inherit the primary popup's
- *   button material through `materialAnchor`.
+ *   expanded appearance through `materialAnchor`.
  * @param contentPadding Padding around the items.
  * @param content The items.
  */
@@ -396,7 +397,8 @@ fun GlassPopupItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = text,
-                style = MiuixTheme.textStyles.headline2,
+                fontSize = MiuixTheme.textStyles.body1.fontSize,
+                fontWeight = FontWeight.Medium,
                 color = color,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
