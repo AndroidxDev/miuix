@@ -68,12 +68,14 @@ import top.yukonga.miuix.kmp.glass.GlassDialogButtonRole
 import top.yukonga.miuix.kmp.glass.GlassDropdownPreference
 import top.yukonga.miuix.kmp.glass.GlassIconButton
 import top.yukonga.miuix.kmp.glass.GlassNavigationBar
+import top.yukonga.miuix.kmp.glass.GlassNavigationBarDefaults
 import top.yukonga.miuix.kmp.glass.GlassNavigationItem
 import top.yukonga.miuix.kmp.glass.GlassPopupDefaults
 import top.yukonga.miuix.kmp.glass.GlassPopupItem
 import top.yukonga.miuix.kmp.glass.GlassPopupSizing
 import top.yukonga.miuix.kmp.glass.GlassSecondaryPopup
 import top.yukonga.miuix.kmp.glass.GlassSegmentedTabRow
+import top.yukonga.miuix.kmp.glass.GlassShadows
 import top.yukonga.miuix.kmp.glass.GlassStroke
 import top.yukonga.miuix.kmp.glass.GlassStrokes
 import top.yukonga.miuix.kmp.glass.GlassStyle
@@ -208,6 +210,7 @@ fun GlassPage(padding: PaddingValues) {
     var overlayIndex by remember { mutableIntStateOf(OVERLAY_NONE) }
     var tabPlacement by remember { mutableIntStateOf(TABS_IN_TOP_BAR) }
     var progressiveTopBarBlur by remember { mutableStateOf(false) }
+    var navigationSearchButton by remember { mutableStateOf(true) }
     val topBarWindowInsets = WindowInsets.statusBars
     var navIndex by remember { mutableIntStateOf(0) }
     var primaryTab by remember { mutableIntStateOf(0) }
@@ -227,6 +230,11 @@ fun GlassPage(padding: PaddingValues) {
     var submenuAnchor by remember { mutableStateOf(Rect.Zero) }
     var menuWidth by remember { mutableStateOf(0.dp) }
     var sortOrder by remember { mutableIntStateOf(0) }
+    val openSearch: () -> Unit = {
+        submenu = false
+        overlayIndex = OVERLAY_NONE
+        searchExpanded = true
+    }
     val density = LocalDensity.current
     val arrowTurn = CascadingPopupDefaults.arrowRotation(LocalLayoutDirection.current)
     val submenuArrow by animateFloatAsState(
@@ -295,6 +303,7 @@ fun GlassPage(padding: PaddingValues) {
                 bottomBar = {
                     Column(
                         modifier = Modifier
+                            .fillMaxWidth()
                             .padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = bottomBarMargin)
                             .graphicsLayer { this.alpha = if (searchExpanded) 0f else 1f },
                         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -308,9 +317,14 @@ fun GlassPage(padding: PaddingValues) {
                             modifier = Modifier.layout { measurable, constraints ->
                                 // BottomNavigator's four/five-item rule accounts for overlapping items
                                 // before deciding whether to use the compact 344dp wide-screen bar.
-                                val available = constraints.maxWidth + (10.dp * (NavItems.size - 1) - 6.dp).roundToPx()
+                                val actionWidth = if (navigationSearchButton) {
+                                    (GlassNavigationBarDefaults.Height + GlassNavigationBarDefaults.ActionSpacing).roundToPx()
+                                } else {
+                                    0
+                                }
+                                val available = constraints.maxWidth - actionWidth + (10.dp * (NavItems.size - 1) - 6.dp).roundToPx()
                                 val width = if (constraints.hasBoundedWidth && available > 400.dp.roundToPx()) {
-                                    constraints.constrainWidth(344.dp.roundToPx())
+                                    constraints.constrainWidth(344.dp.roundToPx() + actionWidth)
                                 } else {
                                     constraints.maxWidth
                                 }
@@ -320,6 +334,28 @@ fun GlassPage(padding: PaddingValues) {
                             style = style,
                             alpha = alpha,
                             stroke = stroke,
+                            trailingAction = if (navigationSearchButton) {
+                                {
+                                    GlassIconButton(
+                                        onClick = openSearch,
+                                        backdrop = backdrop,
+                                        size = GlassNavigationBarDefaults.Height,
+                                        style = style,
+                                        surfaceAlpha = alpha,
+                                        stroke = stroke,
+                                        shadow = GlassShadows.Float,
+                                    ) {
+                                        Icon(
+                                            imageVector = MiuixIcons.Glass.Search,
+                                            contentDescription = "Search",
+                                            modifier = Modifier.size(24.dp),
+                                            tint = MiuixTheme.colorScheme.onSurface,
+                                        )
+                                    }
+                                }
+                            } else {
+                                null
+                            },
                         )
                     }
                 },
@@ -388,11 +424,7 @@ fun GlassPage(padding: PaddingValues) {
                             actions = {
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     GlassIconButton(
-                                        onClick = {
-                                            submenu = false
-                                            overlayIndex = OVERLAY_NONE
-                                            searchExpanded = true
-                                        },
+                                        onClick = openSearch,
                                     ) {
                                         Icon(
                                             imageVector = MiuixIcons.Glass.Search,
@@ -524,6 +556,11 @@ fun GlassPage(padding: PaddingValues) {
                                         title = "Top bar progressive blur",
                                         checked = progressiveTopBarBlur,
                                         onCheckedChange = { progressiveTopBarBlur = it },
+                                    )
+                                    SwitchPreference(
+                                        title = "Navigation search button",
+                                        checked = navigationSearchButton,
+                                        onCheckedChange = { navigationSearchButton = it },
                                     )
                                     GlassDropdownPreference(
                                         title = "Tab row",
