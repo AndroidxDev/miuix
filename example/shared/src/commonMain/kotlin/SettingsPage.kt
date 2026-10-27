@@ -44,7 +44,7 @@ import utils.pageScrollModifiers
 import utils.rememberBlurBackdrop
 
 private val NavigationBarDisplayModeOptions = listOf("IconAndText", "IconOnly", "IconWithSelectedLabel")
-private val FloatingNavigationBarStyleOptions = listOf("Default", "iOS-like")
+private val FloatingNavigationBarStyleOptions = listOf("Default", "Glass", "iOS-like")
 private val FloatingNavigationBarPositionOptions = listOf("Center", "Start", "End")
 private val FloatingToolbarPositionOptions =
     listOf("TopStart", "CenterStart", "BottomStart", "TopEnd", "CenterEnd", "BottomEnd", "TopCenter", "BottomCenter")
@@ -52,10 +52,11 @@ private val FloatingToolbarOrientationOptions = listOf("Horizontal", "Vertical")
 private val FabPositionOptions = listOf("Start", "Center", "End", "EndOverlay")
 private val ColorModeOptions = listOf("System", "Light", "Dark", "MonetSystem", "MonetLight", "MonetDark")
 private val NavTransitionStyleOptions = listOf("Miuix", "AOSP")
-private val BlurStyleOptions = listOf("Gaussian", "Progressive")
+private val TopAppBarStyleOptions = listOf("Default", "Glass")
 private val PaletteStyleOptions = ThemePaletteStyle.entries.map { it.name }
 private val ColorSpecOptions = ThemeColorSpec.entries.map { it.name }
 private val KeyColorOptions = listOf("Default") + ui.KeyColors.map { it.first }
+private val PagerGestureModeOptions = listOf("Default", "Cross-Axis", "iOS-like")
 
 @Composable
 fun SettingsPage(
@@ -70,7 +71,7 @@ fun SettingsPage(
 
     Scaffold(
         topBar = {
-            BlurredBar(backdrop, blurActive, topAppBarScrollBehavior) {
+            BlurredBar(backdrop, blurActive) {
                 AdaptiveTopAppBar(
                     title = "Settings",
                     showTopAppBar = appState.showTopAppBar,
@@ -147,10 +148,24 @@ private fun SettingsContent(
                                 selectedIndex = appState.paletteStyle,
                                 onSelectedIndexChange = { updateAppState { state -> state.copy(paletteStyle = it) } },
                             )
+                            val currentStyle = ThemePaletteStyle.entries.getOrNull(appState.paletteStyle) ?: ThemePaletteStyle.TonalSpot
+                            val isCmf = currentStyle == ThemePaletteStyle.Cmf
+                            val isSpec2025Supported = currentStyle in listOf(
+                                ThemePaletteStyle.TonalSpot,
+                                ThemePaletteStyle.Neutral,
+                                ThemePaletteStyle.Vibrant,
+                                ThemePaletteStyle.Expressive,
+                            )
+                            val (colorSpecItems, colorSpecIndex, colorSpecEnabled) = when {
+                                isCmf -> Triple(listOf("Spec2026"), 0, false)
+                                !isSpec2025Supported -> Triple(listOf("Spec2021"), 0, false)
+                                else -> Triple(ColorSpecOptions, appState.colorSpec, true)
+                            }
                             OverlayDropdownPreference(
                                 title = "Color Spec",
-                                items = ColorSpecOptions,
-                                selectedIndex = appState.colorSpec,
+                                enabled = colorSpecEnabled,
+                                items = colorSpecItems,
+                                selectedIndex = colorSpecIndex,
                                 onSelectedIndexChange = { updateAppState { state -> state.copy(colorSpec = it) } },
                             )
                         }
@@ -179,17 +194,25 @@ private fun SettingsContent(
                         checked = appState.enablePageUserScroll,
                         onCheckedChange = { updateAppState { state -> state.copy(enablePageUserScroll = it) } },
                     )
+                    AnimatedVisibility(visible = appState.enablePageUserScroll) {
+                        OverlayDropdownPreference(
+                            title = "Pager Gesture Mode",
+                            items = PagerGestureModeOptions,
+                            selectedIndex = appState.pagerInterceptionMode,
+                            onSelectedIndexChange = { updateAppState { state -> state.copy(pagerInterceptionMode = it) } },
+                        )
+                    }
                     SwitchPreference(
                         title = "Show TopAppBar",
                         checked = appState.showTopAppBar,
                         onCheckedChange = { updateAppState { state -> state.copy(showTopAppBar = it) } },
                     )
-                    AnimatedVisibility(visible = appState.showTopAppBar && appState.enableBlur && isRuntimeShaderSupported()) {
+                    AnimatedVisibility(visible = appState.showTopAppBar) {
                         OverlayDropdownPreference(
-                            title = "TopAppBar Blur Style",
-                            items = BlurStyleOptions,
-                            selectedIndex = appState.blurStyle,
-                            onSelectedIndexChange = { updateAppState { state -> state.copy(blurStyle = it) } },
+                            title = "TopAppBar Style",
+                            items = TopAppBarStyleOptions,
+                            selectedIndex = appState.topAppBarStyle,
+                            onSelectedIndexChange = { updateAppState { state -> state.copy(topAppBarStyle = it) } },
                         )
                     }
                     SwitchPreference(

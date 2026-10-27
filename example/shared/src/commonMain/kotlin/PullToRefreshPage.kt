@@ -45,6 +45,7 @@ import top.yukonga.miuix.kmp.basic.VerticalScrollBar
 import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
 import top.yukonga.miuix.kmp.basic.rememberScrollBarAdapter
 import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.glass.GlassIconButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
@@ -96,7 +97,7 @@ fun PullToRefreshPage(
 
     Scaffold(
         topBar = {
-            BlurredBar(backdrop, blurActive, topAppBarScrollBehavior) {
+            BlurredBar(backdrop, blurActive) {
                 AdaptiveTopAppBar(
                     title = "Popup",
                     showTopAppBar = appState.showTopAppBar,
@@ -109,14 +110,24 @@ fun PullToRefreshPage(
                         )
                     },
                     actions = {
-                        IconButton(
-                            onClick = { isRefreshing = true },
-                        ) {
-                            Icon(
-                                imageVector = MiuixIcons.Refresh,
-                                contentDescription = "Refresh",
-                                tint = MiuixTheme.colorScheme.onBackground,
-                            )
+                        if (appState.topAppBarStyle == 1) {
+                            GlassIconButton(onClick = { isRefreshing = true }) {
+                                Icon(
+                                    imageVector = MiuixIcons.Refresh,
+                                    contentDescription = "Refresh",
+                                    tint = MiuixTheme.colorScheme.onBackground,
+                                )
+                            }
+                        } else {
+                            IconButton(
+                                onClick = { isRefreshing = true },
+                            ) {
+                                Icon(
+                                    imageVector = MiuixIcons.Refresh,
+                                    contentDescription = "Refresh",
+                                    tint = MiuixTheme.colorScheme.onBackground,
+                                )
+                            }
                         }
                     },
                 )

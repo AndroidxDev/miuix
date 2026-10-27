@@ -20,27 +20,29 @@ Compose Multiplatform UI component library. Targets Android, iOS, Desktop (JVM),
 | Run Android demo    | `./gradlew :example:android:installDebug`               |
 | Run Desktop demo    | `./gradlew :example:desktop:hotRunDesktop --auto`       |
 | Run WasmJs demo     | `./gradlew :example:web:wasmJsBrowserRun`               |
-| Run Js demo         | `./gradlew :example:web:jsBrowserDevelopmentRun`        |
 | Run macOS demo      | `./gradlew :example:macos:runDebugExecutableMacosArm64` |
 | Run iOS demo        | Open `example/ios/iosApp.xcodeproj` in Xcode and run    |
 
 ## Repository Structure
 
-| Directory           | Purpose                                                                    |
-| :------------------ | :------------------------------------------------------------------------- |
-| `miuix-core/`       | Utilities + MiuixIcons base (depended on by `ui` and `icons`)              |
-| `miuix-ui/`         | Main UI library                                                            |
-| `miuix-preference/` | Preference / menu / popup components                                       |
-| `miuix-shader/`     | Runtime shader / render effect abstraction (used by `blur` and `squircle`) |
-| `miuix-blur/`       | Blur effects (Android minSdk=33; depends on `miuix-shader`)                |
-| `miuix-squircle/`   | Squircle corner shapes (depends on `miuix-shader`)                         |
-| `miuix-icons/`      | Extended icon resources                                                    |
-| `miuix-nav/`        | Navigation runtime (depends on `miuix-squircle`)                           |
-| `example/`          | Demo app                                                                   |
-| `baselineprofile/`  | Android baseline profile generation                                        |
-| `docs/`             | VitePress documentation site                                               |
-| `build-plugins/`    | Custom Gradle plugins                                                      |
-| `gradle/`           | Version catalog + wrapper                                                  |
+| Directory            | Purpose                                                                    |
+| :------------------- | :------------------------------------------------------------------------- |
+| `miuix-core/`        | Utilities + MiuixIcons base (depended on by `ui` and `icons`)              |
+| `miuix-ui/`          | Main UI library                                                            |
+| `miuix-preference/`  | Preference / menu / popup components                                       |
+| `miuix-icons/`       | Extended icon resources                                                    |
+| `miuix-glass-icons/` | Glass icon set, `MiuixIcons.Glass` (depends on `miuix-core`)               |
+| `miuix-shader/`      | Runtime shader / render effect abstraction (used by `blur` and `squircle`) |
+| `miuix-blur/`        | Blur effects (Android minSdk=33; depends on `miuix-shader`)                |
+| `miuix-squircle/`    | Squircle corner shapes (depends on `miuix-shader`)                         |
+| `miuix-glass/`       | Glass material + components (Android minSdk=33; depends on `miuix-blur`)   |
+| `miuix-nav/`         | Navigation runtime (depends on `miuix-squircle`)                           |
+| `miuix-window/`      | Desktop window & caption bar styling (Desktop JVM)                         |
+| `example/`           | Demo app                                                                   |
+| `baselineprofile/`   | Android baseline profile generation                                        |
+| `docs/`              | VitePress documentation site                                               |
+| `build-logic/`       | Custom Gradle plugins                                                      |
+| `gradle/`            | Version catalog + wrapper                                                  |
 
 ### Component Source Layout
 
@@ -67,6 +69,15 @@ Compose Multiplatform UI component library. Targets Android, iOS, Desktop (JVM),
 | `menu/`       | Dropdown menus (Overlay/Window variants, cascading)             |
 | `popup/`      | Dropdown popup primitives shared by menus                       |
 
+`miuix-glass/src/commonMain/kotlin/top/yukonga/miuix/kmp/`:
+
+| Subdir            | Contents                                                              |
+| :---------------- | :-------------------------------------------------------------------- |
+| `glass/`          | Glass material + components (GlassPanel, GlassDialog, GlassTabRow, …) |
+| `glass/internal/` | Backdrop sampling / shader internals                                  |
+
+`miuix-glass-icons/src/commonMain/kotlin/top/yukonga/miuix/kmp/icon/` is a flat `glass/` icon set — one file per icon, reached through `MiuixIcons.Glass`.
+
 ### Platform Source Sets
 
 ```
@@ -86,7 +97,7 @@ commonMain
 
 ## Code Style
 
-- **Formatter**: Spotless + ktlint with Compose rules (`io.nlopez.compose.rules:ktlint`); exact versions in `build-plugins/src/main/kotlin/module.spotless.gradle.kts`
+- **Formatter**: Spotless + ktlint with Compose rules (`io.nlopez.compose.rules:ktlint`); exact versions in `build-logic/src/main/kotlin/module.spotless.gradle.kts`
 - **License header** (required on all `.kt` and `.kts` files; Spotless auto-fills `$YEAR` with the current year — do not manually change years in existing headers):
 
   ```

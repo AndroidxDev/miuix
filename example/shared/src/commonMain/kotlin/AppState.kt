@@ -15,6 +15,7 @@ data class AppState(
     // UI
     val showFPSMonitor: Boolean = false,
     val showTopAppBar: Boolean = true,
+    val topAppBarStyle: Int = 0,
     val showNavigationBar: Boolean = true,
     val showNavigationBarBadge: Boolean = false,
     val navigationBarMode: Int = 0,
@@ -28,6 +29,7 @@ data class AppState(
     val floatingActionButtonPosition: Int = 2,
     val enablePageUserScroll: Boolean = true,
     val enableScrollEndHaptic: Boolean = true,
+    val pagerInterceptionMode: Int = 1,
     val enableCornerClip: Boolean = true,
     val enableDim: Boolean = true,
     val blockInputDuringTransition: Boolean = false,
@@ -37,7 +39,6 @@ data class AppState(
     val enableSquircle: Boolean = true,
     // Blur
     val enableBlur: Boolean = true,
-    val blurStyle: Int = 0,
 )
 
 val LocalAppState = compositionLocalOf<AppState> {
